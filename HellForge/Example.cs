@@ -19,9 +19,17 @@ namespace HellForge
     /// </summary>
     class Example
     {
+        //=======================================================
+        //
+        // Configuration
+        //
+        //=======================================================
+
+        // Insert your application's API key here (must be a "Client Application key", get one here: http://dev.evernote.com/documentation/cloud/)
         public const string ApiConsumerKey = "CHANGE_ME";
         public const string ApiConsumerSecret = "CHANGE_ME";
 
+        // Set the environment here (sandbox or www).
         public const string Host = "sandbox.evernote.com";
         public const string BaseUrl = "https://" + Host;
 
@@ -55,7 +63,7 @@ namespace HellForge
             {
                 UserStore.Client userClient = new UserStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/user" ) ) ) );
 
-                if ( !userClient.checkVersion( "Evernote CS Example", Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MAJOR, Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MINOR ) )
+                if ( !userClient.checkVersion( "EvernoteSharp", Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MAJOR, Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MINOR ) )
                     throw new OldApiException( );
 
                 return userClient.authenticate( username, password, ApiConsumerKey, ApiConsumerSecret );
