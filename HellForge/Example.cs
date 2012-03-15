@@ -27,21 +27,21 @@ namespace HellForge
 
         /// <summary>
         /// Demonstrates the Evernote API by posting an example note in the user's default notebook.
+        /// Be sure to register an account at http://sandbox.evernote.com (production accounts will not work here!)
         /// </summary>
         public static void PostExampleNote( string username, string password )
         {
             // Login to Evernote.
             AuthenticationResult auth = Authenticate( username, password );
-            User user = auth.User;
-            string token = auth.AuthenticationToken;
 
-            NoteStore.Client noteClient = new NoteStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/note/" + user.ShardId ) ) ) );
+            // Connect to the note store.
+            NoteStore.Client noteClient = new NoteStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/note/" + auth.User.ShardId ) ) ) );
 
             // Find the default notebook.
-            Notebook notebook = FindDefaultNotebook( noteClient.listNotebooks( token ) );
+            Notebook notebook = FindDefaultNotebook( noteClient.listNotebooks( auth.AuthenticationToken ) );
 
             // Create a new note in it.
-            Note createdNote = noteClient.createNote( token, MakeDummyNote( notebook ) );
+            Note createdNote = noteClient.createNote( auth.AuthenticationToken, MakeDummyNote( notebook ) );
 
             Console.WriteLine( "Successfully created new note with GUID: " + createdNote.Guid );
         }
@@ -53,13 +53,12 @@ namespace HellForge
         {
             try
             {
-                Uri userStoreUrl = new Uri( BaseUrl + "/edam/user" );
-                UserStore.Client client = new UserStore.Client( new TBinaryProtocol( new THttpClient( userStoreUrl ) ) );
+                UserStore.Client userClient = new UserStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/user" ) ) ) );
 
-                if ( !client.checkVersion( "Evernote CS Example", Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MAJOR, Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MINOR ) )
+                if ( !userClient.checkVersion( "Evernote CS Example", Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MAJOR, Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MINOR ) )
                     throw new Exception( "Our version of Evernote's API is out of date. Please bug @philltopia" );
 
-                return client.authenticate( username, password, ApiConsumerKey, ApiConsumerSecret );
+                return userClient.authenticate( username, password, ApiConsumerKey, ApiConsumerSecret );
             }
             catch ( EDAMUserException ex )
             {
@@ -68,7 +67,7 @@ namespace HellForge
         }
 
         /// <summary>
-        /// Given the list of Evernote notebooks, finds the default one.
+        /// Finds the user's default notebook (where new notes should go) from the list.
         /// </summary>
         private static Notebook FindDefaultNotebook( List<Notebook> notebooks )
         {
@@ -89,7 +88,6 @@ namespace HellForge
         {
             byte[] image = File.ReadAllBytes( "enlogo.png" );
             byte[] hash = new MD5CryptoServiceProvider( ).ComputeHash( image );
-            string hashHex = BitConverter.ToString( hash ).Replace( "-", "" ).ToLower( );
 
             // Create the note.
             Note note = new Note
@@ -99,7 +97,7 @@ namespace HellForge
                 Content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">" +
                     "<en-note>Here's the Evernote logo:<br/>" +
-                    "<en-media type=\"image/png\" hash=\"" + hashHex + "\"/>" +
+                    "<en-media type=\"image/png\" hash=\"" + Md5HashToHex(hash) + "\"/>" +
                     "</en-note>",
             };
 
@@ -139,6 +137,14 @@ namespace HellForge
             }
 
             return new Exception( errorMessage );
-        }      
+        }
+
+        /// <summary>
+        /// Returns the hexadecimal representation of the given MD5 hash.
+        /// </summary>
+        private static string Md5HashToHex( byte[] hash )
+        {
+            return BitConverter.ToString( hash ).Replace( "-", "" ).ToLower( );
+        }
     }
 }
