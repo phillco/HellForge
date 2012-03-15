@@ -56,7 +56,7 @@ namespace HellForge
                 UserStore.Client userClient = new UserStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/user" ) ) ) );
 
                 if ( !userClient.checkVersion( "Evernote CS Example", Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MAJOR, Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MINOR ) )
-                    throw new AuthenticationFailedException( "Our version of Evernote's API is out of date. Please bug @philltopia" );
+                    throw new OldApiException( );
 
                 return userClient.authenticate( username, password, ApiConsumerKey, ApiConsumerSecret );
             }
@@ -97,7 +97,7 @@ namespace HellForge
                 Content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">" +
                     "<en-note>Here's the Evernote logo:<br/>" +
-                    "<en-media type=\"image/png\" hash=\"" + Md5HashToHex(hash) + "\"/>" +
+                    "<en-media type=\"image/png\" hash=\"" + Md5HashToHex( hash ) + "\"/>" +
                     "</en-note>",
             };
 
@@ -109,8 +109,7 @@ namespace HellForge
         }
 
         /// <summary>
-        /// Given the login failure from Evernote, determines what's wrong.
-        /// This is still rather crude and should actually return separate exceptions.
+        /// Determines what went wrong given the login failure from Evernote.
         /// </summary>
         private static Exception DecodeLoginFailure( EDAMUserException ex )
         {
@@ -119,21 +118,11 @@ namespace HellForge
             if ( ex.ErrorCode == EDAMErrorCode.INVALID_AUTH )
             {
                 if ( invalidParameter == "consumerKey" )
-                    return new AuthenticationFailedException( "Your consumer key was not accepted by " + Host + "." );
+                    return new BadConsumerKeyException( Host );
                 else if ( invalidParameter == "password" )
-                    return new AuthenticationFailedException( "The password that you entered is incorrect" );
+                    return new BadPasswordException( );
                 else if ( invalidParameter == "username" )
-                {
-                    String message = "You must authenticate using a username and password from " + Host + ".";
-                    if ( Host != "www.evernote.com" )
-                    {
-                        message += Environment.NewLine;
-                        message += "Note that your production Evernote account will not work on " + Host + "," + Environment.NewLine;
-                        message += "You must register for a separate test account at https://" + Host + "/Registration.action" + Environment.NewLine;
-                    }
-
-                    return new AuthenticationFailedException( message );
-                }                
+                    return new BadUsernameException( );
             }
 
             return new AuthenticationFailedException( "Authentication failed (parameter: " + invalidParameter + " errorCode: " + ex.ErrorCode + ")" + Environment.NewLine );
@@ -147,7 +136,29 @@ namespace HellForge
             return BitConverter.ToString( hash ).Replace( "-", "" ).ToLower( );
         }
 
-        public class AuthenticationFailedException : Exception { public AuthenticationFailedException( string mesage ) : base( mesage ) { } }
+        //=======================================================
+        //
+        // Exceptions
+        //
+        //=======================================================
+
+        /// <summary>A generic API failure.</summary>
+        public class EvernoteApiException : Exception { public EvernoteApiException( string mesage ) : base( mesage ) { } }
+
+        /// <summary>A generic authentication failure.</summary>
+        public class AuthenticationFailedException : EvernoteApiException { public AuthenticationFailedException( string mesage ) : base( mesage ) { } }
+
+        /// <summary>Thrown when Evernote has modified their API and this program is no longer compatible.</summary>
+        public class OldApiException : AuthenticationFailedException { public OldApiException( ) : base( "This program's Evernote API is out of date." ) { } }
+
+        /// <summary>Thrown when this application's consumer key was not recognized by Evernote.</summary>
+        public class BadConsumerKeyException : AuthenticationFailedException { public BadConsumerKeyException( string host ) : base( "This program's Evernote consumer key was not accepted by " + Host + "." ) { } }
+
+        /// <summary>Thrown when the user's username was invalid. (Remember, sandbox.evernote.com and evernote.com accounts are separate)</summary>
+        public class BadUsernameException : AuthenticationFailedException { public BadUsernameException( ) : base( "The username that you entered does not exist." ) { } }
+
+        /// <summary>Thrown when the user's password was invalid.</summary>
+        public class BadPasswordException : AuthenticationFailedException { public BadPasswordException( ) : base( "The password that you entered is incorrect." ) { } }
 
     }
 }
