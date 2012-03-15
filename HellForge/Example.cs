@@ -22,128 +22,123 @@ namespace HellForge
         public const string ApiConsumerKey = "CHANGE_ME";
         public const string ApiConsumerSecret = "CHANGE_ME";
 
+        public const string Host = "sandbox.evernote.com";
+        public const string BaseUrl = "https://" + Host;
+
+        /// <summary>
+        /// Demonstrates the Evernote API by posting an example note in the user's default notebook.
+        /// </summary>
         public static void PostExampleNote( string username, string password )
         {
-            String evernoteHost = "sandbox.evernote.com";
-            String edamBaseUrl = "https://" + evernoteHost;
-            // If using Mono, see http://www.mono-project.com/FAQ:_Security
+            // Login to Evernote.
+            AuthenticationResult auth = Authenticate( username, password );
+            User user = auth.User;
+            string token = auth.AuthenticationToken;
 
-            Uri userStoreUrl = new Uri( edamBaseUrl + "/edam/user" );
-            TTransport userStoreTransport = new THttpClient( userStoreUrl );
-            TProtocol userStoreProtocol = new TBinaryProtocol( userStoreTransport );
-            UserStore.Client userStore = new UserStore.Client( userStoreProtocol );
+            NoteStore.Client noteClient = new NoteStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/note/" + user.ShardId ) ) ) );
 
-            bool versionOK =
-                userStore.checkVersion( "C# EDAMTest",
-                   Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MAJOR,
-                   Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MINOR );
-            Console.WriteLine( "Is my EDAM protocol version up to date? " + versionOK );
-            if ( !versionOK )
-            {
-                return;
-            }
+            // Find the default notebook.
+            Notebook notebook = FindDefaultNotebook( noteClient.listNotebooks( token ) );
 
-            AuthenticationResult authResult = null;
+            // Create a new note in it.
+            Note createdNote = noteClient.createNote( token, MakeDummyNote( notebook ) );
+
+            Console.WriteLine( "Successfully created new note with GUID: " + createdNote.Guid );
+        }
+
+        /// <summary>
+        /// Logs into Evernote with the given username and password.
+        /// </summary>
+        private static AuthenticationResult Authenticate( string username, string password )
+        {
             try
             {
-                authResult = userStore.authenticate( username, password,
-                                                    ApiConsumerKey, ApiConsumerSecret );
+                Uri userStoreUrl = new Uri( BaseUrl + "/edam/user" );
+                UserStore.Client client = new UserStore.Client( new TBinaryProtocol( new THttpClient( userStoreUrl ) ) );
+
+                if ( !client.checkVersion( "Evernote CS Example", Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MAJOR, Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MINOR ) )
+                    throw new Exception( "Our version of Evernote's API is out of date. Please bug @philltopia" );
+
+                return client.authenticate( username, password, ApiConsumerKey, ApiConsumerSecret );
             }
             catch ( EDAMUserException ex )
             {
-                String parameter = ex.Parameter;
-                EDAMErrorCode errorCode = ex.ErrorCode;
-
-                Console.WriteLine( "Authentication failed (parameter: " + parameter + " errorCode: " + errorCode + ")" );
-
-                if ( errorCode == EDAMErrorCode.INVALID_AUTH )
-                {
-                    if ( parameter == "consumerKey" )
-                    {
-                        if ( ApiConsumerKey == "en-edamtest" )
-                        {
-                            Console.WriteLine( "You must replace the variables consumerKey and consumerSecret with the values you received from Evernote." );
-                        }
-                        else
-                        {
-                            Console.WriteLine( "Your consumer key was not accepted by " + evernoteHost );
-                            Console.WriteLine( "This sample client application requires a client API key. If you requested a web service API key, you must authenticate using OAuth" );
-                        }
-                        Console.WriteLine( "If you do not have an API Key from Evernote, you can request one from http://www.evernote.com/about/developer/api" );
-                    }
-                    else if ( parameter == "username" )
-                    {
-                        Console.WriteLine( "You must authenticate using a username and password from " + evernoteHost );
-                        if ( evernoteHost == "www.evernote.com" == false )
-                        {
-                            Console.WriteLine( "Note that your production Evernote account will not work on " + evernoteHost + "," );
-                            Console.WriteLine( "you must register for a separate test account at https://" + evernoteHost + "/Registration.action" );
-                        }
-                    }
-                    else if ( parameter == "password" )
-                    {
-                        Console.WriteLine( "The password that you entered is incorrect" );
-                    }
-                }
-
-                return;
+                throw DecodeLoginFailure( ex );
             }
+        }
 
-            User user = authResult.User;
-            String authToken = authResult.AuthenticationToken;
-            Console.WriteLine( "Authentication successful for: " + user.Username );
-            Console.WriteLine( "Authentication token = " + authToken );
+        /// <summary>
+        /// Given the list of Evernote notebooks, finds the default one.
+        /// </summary>
+        private static Notebook FindDefaultNotebook( List<Notebook> notebooks )
+        {
+            if ( notebooks.Count == 0 )
+                return null;
 
-            Uri noteStoreUrl = new Uri( edamBaseUrl + "/edam/note/" + user.ShardId );
-            TTransport noteStoreTransport = new THttpClient( noteStoreUrl );
-            TProtocol noteStoreProtocol = new TBinaryProtocol( noteStoreTransport );
-            NoteStore.Client noteStore = new NoteStore.Client( noteStoreProtocol );
+            Notebook defaultNotebook = notebooks.Find( delegate( Notebook n ) { return n.DefaultNotebook; } );
+            if ( defaultNotebook == null )
+                defaultNotebook = notebooks[0];
 
-            List<Notebook> notebooks = noteStore.listNotebooks( authToken );
-            Console.WriteLine( "Found " + notebooks.Count + " notebooks:" );
-            Notebook defaultNotebook = notebooks[0];
-            foreach ( Notebook notebook in notebooks )
-            {
-                Console.WriteLine( "  * " + notebook.Name );
-                if ( notebook.DefaultNotebook )
-                {
-                    defaultNotebook = notebook;
-                }
-            }
+            return defaultNotebook;
+        }
 
-            Console.WriteLine( );
-            Console.WriteLine( "Creating a note in the default notebook: " +
-                              defaultNotebook.Name );
-            Console.WriteLine( );
-
+        /// <summary>
+        /// Creates a sample note to be placed in the given notebook.
+        /// </summary>
+        private static Note MakeDummyNote( Notebook createIn )
+        {
             byte[] image = ReadFully( File.OpenRead( "enlogo.png" ) );
             byte[] hash = new MD5CryptoServiceProvider( ).ComputeHash( image );
             string hashHex = BitConverter.ToString( hash ).Replace( "-", "" ).ToLower( );
 
-            Data data = new Data( );
-            data.Size = image.Length;
-            data.BodyHash = hash;
-            data.Body = image;
+            // Create the note.
+            Note note = new Note
+            {
+                NotebookGuid = createIn.Guid,
+                Title = "Test note from EDAMTest.cs",
+                Content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                    "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">" +
+                    "<en-note>Here's the Evernote logo:<br/>" +
+                    "<en-media type=\"image/png\" hash=\"" + hashHex + "\"/>" +
+                    "</en-note>",
+            };
 
-            Resource resource = new Resource( );
-            resource.Mime = "image/png";
-            resource.Data = data;
-
-            Note note = new Note( );
-            note.NotebookGuid = defaultNotebook.Guid;
-            note.Title = "Test note from EDAMTest.cs";
-            note.Content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">" +
-                "<en-note>Here's the Evernote logo:<br/>" +
-                "<en-media type=\"image/png\" hash=\"" + hashHex + "\"/>" +
-                "</en-note>";
-
+            // Attach the image to the note as a resource.
             note.Resources = new List<Resource>( );
-            note.Resources.Add( resource );
+            note.Resources.Add( new Resource { Mime = "image/png", Data = new Data { Size = image.Length, BodyHash = hash, Body = image } } );
 
-            Note createdNote = noteStore.createNote( authToken, note );
+            return note;
+        }
 
-            Console.WriteLine( "Successfully created new note with GUID: " + createdNote.Guid );
+        /// <summary>
+        /// Given the login failure from Evernote, determines what's wrong.
+        /// This is still rather crude and should actually return separate exceptions.
+        /// </summary>
+        private static Exception DecodeLoginFailure( EDAMUserException ex )
+        {
+            String parameter = ex.Parameter;
+            EDAMErrorCode errorCode = ex.ErrorCode;
+
+            string errorMessage = "Authentication failed (parameter: " + parameter + " errorCode: " + errorCode + ")" + Environment.NewLine;
+
+            if ( errorCode == EDAMErrorCode.INVALID_AUTH )
+            {
+                if ( parameter == "consumerKey" )
+                    errorMessage += "Your consumer key was not accepted by " + Host + Environment.NewLine;
+                else if ( parameter == "username" )
+                {
+                    errorMessage += "You must authenticate using a username and password from " + Host + Environment.NewLine;
+                    if ( Host != "www.evernote.com" )
+                    {
+                        errorMessage += "Note that your production Evernote account will not work on " + Host + "," + Environment.NewLine;
+                        errorMessage += "You must register for a separate test account at https://" + Host + "/Registration.action" + Environment.NewLine;
+                    }
+                }
+                else if ( parameter == "password" )
+                    errorMessage += "The password that you entered is incorrect" + Environment.NewLine;
+            }
+
+            return new Exception( errorMessage );
         }
 
         public static byte[] ReadFully( Stream stream )
