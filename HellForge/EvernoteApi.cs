@@ -17,7 +17,7 @@ namespace HellForge
     /// <summary>
     /// Evernote's example API code.
     /// </summary>
-    class Example
+    class EvernoteApi
     {
         //=======================================================
         //
@@ -101,7 +101,7 @@ namespace HellForge
             Note note = new Note
             {
                 NotebookGuid = createIn.Guid,
-                Title = "Test note from HellForge!",
+                Title = "Test note from EvernoteSharp!",
                 Content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">" +
                     "<en-note>Here's the Evernote logo:<br/>" +

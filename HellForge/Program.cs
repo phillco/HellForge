@@ -19,7 +19,7 @@ namespace HellForge
                 return;
             }
 
-            Example.PostExampleNote( Configuration.CurrentSettings.EvernoteUsername, Configuration.CurrentSettings.EvernotePassword );
+            EvernoteApi.PostExampleNote( Configuration.CurrentSettings.EvernoteUsername, Configuration.CurrentSettings.EvernotePassword );
         }
     }
 }
