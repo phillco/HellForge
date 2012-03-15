@@ -87,7 +87,7 @@ namespace HellForge
         /// </summary>
         private static Note MakeDummyNote( Notebook createIn )
         {
-            byte[] image = ReadFully( File.OpenRead( "enlogo.png" ) );
+            byte[] image = File.ReadAllBytes( "enlogo.png" );
             byte[] hash = new MD5CryptoServiceProvider( ).ComputeHash( image );
             string hashHex = BitConverter.ToString( hash ).Replace( "-", "" ).ToLower( );
 
@@ -95,7 +95,7 @@ namespace HellForge
             Note note = new Note
             {
                 NotebookGuid = createIn.Guid,
-                Title = "Test note from EDAMTest.cs",
+                Title = "Test note from HellForge!",
                 Content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">" +
                     "<en-note>Here's the Evernote logo:<br/>" +
@@ -139,23 +139,6 @@ namespace HellForge
             }
 
             return new Exception( errorMessage );
-        }
-
-        public static byte[] ReadFully( Stream stream )
-        {
-            byte[] buffer = new byte[32768];
-            using ( MemoryStream ms = new MemoryStream( ) )
-            {
-                while ( true )
-                {
-                    int read = stream.Read( buffer, 0, buffer.Length );
-                    if ( read <= 0 )
-                    {
-                        return ms.ToArray( );
-                    }
-                    ms.Write( buffer, 0, read );
-                }
-            }
-        }
+        }      
     }
 }
