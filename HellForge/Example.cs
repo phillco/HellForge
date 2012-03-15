@@ -19,7 +19,10 @@ namespace HellForge
     /// </summary>
     class Example
     {
-        public static void PostExampleNote( string username, string password, string consumerKey, string consumerSecret )
+        public const string ApiConsumerKey = "CHANGE_ME";
+        public const string ApiConsumerSecret = "CHANGE_ME";
+
+        public static void PostExampleNote( string username, string password )
         {
             String evernoteHost = "sandbox.evernote.com";
             String edamBaseUrl = "https://" + evernoteHost;
@@ -44,7 +47,7 @@ namespace HellForge
             try
             {
                 authResult = userStore.authenticate( username, password,
-                                                    consumerKey, consumerSecret );
+                                                    ApiConsumerKey, ApiConsumerSecret );
             }
             catch ( EDAMUserException ex )
             {
@@ -57,7 +60,7 @@ namespace HellForge
                 {
                     if ( parameter == "consumerKey" )
                     {
-                        if ( consumerKey == "en-edamtest" )
+                        if ( ApiConsumerKey == "en-edamtest" )
                         {
                             Console.WriteLine( "You must replace the variables consumerKey and consumerSecret with the values you received from Evernote." );
                         }
