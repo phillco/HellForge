@@ -56,7 +56,7 @@ namespace HellForge
                 UserStore.Client userClient = new UserStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/user" ) ) ) );
 
                 if ( !userClient.checkVersion( "Evernote CS Example", Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MAJOR, Evernote.EDAM.UserStore.Constants.EDAM_VERSION_MINOR ) )
-                    throw new Exception( "Our version of Evernote's API is out of date. Please bug @philltopia" );
+                    throw new AuthenticationFailedException( "Our version of Evernote's API is out of date. Please bug @philltopia" );
 
                 return userClient.authenticate( username, password, ApiConsumerKey, ApiConsumerSecret );
             }
@@ -114,29 +114,29 @@ namespace HellForge
         /// </summary>
         private static Exception DecodeLoginFailure( EDAMUserException ex )
         {
-            String parameter = ex.Parameter;
-            EDAMErrorCode errorCode = ex.ErrorCode;
+            String invalidParameter = ex.Parameter;
 
-            string errorMessage = "Authentication failed (parameter: " + parameter + " errorCode: " + errorCode + ")" + Environment.NewLine;
-
-            if ( errorCode == EDAMErrorCode.INVALID_AUTH )
+            if ( ex.ErrorCode == EDAMErrorCode.INVALID_AUTH )
             {
-                if ( parameter == "consumerKey" )
-                    errorMessage += "Your consumer key was not accepted by " + Host + Environment.NewLine;
-                else if ( parameter == "username" )
+                if ( invalidParameter == "consumerKey" )
+                    return new AuthenticationFailedException( "Your consumer key was not accepted by " + Host + "." );
+                else if ( invalidParameter == "password" )
+                    return new AuthenticationFailedException( "The password that you entered is incorrect" );
+                else if ( invalidParameter == "username" )
                 {
-                    errorMessage += "You must authenticate using a username and password from " + Host + Environment.NewLine;
+                    String message = "You must authenticate using a username and password from " + Host + ".";
                     if ( Host != "www.evernote.com" )
                     {
-                        errorMessage += "Note that your production Evernote account will not work on " + Host + "," + Environment.NewLine;
-                        errorMessage += "You must register for a separate test account at https://" + Host + "/Registration.action" + Environment.NewLine;
+                        message += Environment.NewLine;
+                        message += "Note that your production Evernote account will not work on " + Host + "," + Environment.NewLine;
+                        message += "You must register for a separate test account at https://" + Host + "/Registration.action" + Environment.NewLine;
                     }
-                }
-                else if ( parameter == "password" )
-                    errorMessage += "The password that you entered is incorrect" + Environment.NewLine;
+
+                    return new AuthenticationFailedException( message );
+                }                
             }
 
-            return new Exception( errorMessage );
+            return new AuthenticationFailedException( "Authentication failed (parameter: " + invalidParameter + " errorCode: " + ex.ErrorCode + ")" + Environment.NewLine );
         }
 
         /// <summary>
@@ -146,5 +146,8 @@ namespace HellForge
         {
             return BitConverter.ToString( hash ).Replace( "-", "" ).ToLower( );
         }
+
+        public class AuthenticationFailedException : Exception { public AuthenticationFailedException( string mesage ) : base( mesage ) { } }
+
     }
 }
