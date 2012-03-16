@@ -9,6 +9,6 @@ HellForge sends Evernote clippings to Twitter, automatically.
 
 **Is it ready yet?** No, I just started. I'll update this readme when it is.
 
-**What does it run on?** Microsoft Windows. Requires .NET 4.
+**What does it run on?** Microsoft Windows. Requires .NET 3.5.
 
 **Why's it called HellForge?** Because it's used for my blog, [Users in Hell](http://usersinhell.com).

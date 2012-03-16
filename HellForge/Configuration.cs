@@ -23,6 +23,10 @@ namespace HellForge
 
         public string EvernotePassword { get; set; }
 
+        public string TwitterAccessToken { get; set; }
+
+        public string TwitterAccessSecret { get; set; }
+
         //=======================================================
         //
         // Static variables & events.
@@ -55,6 +59,8 @@ namespace HellForge
                 {
                     EvernoteUsername = "username-here",
                     EvernotePassword = "password-here",
+                    TwitterAccessToken = "",
+                    TwitterAccessSecret = ""
                 };
             }
         }
@@ -95,6 +101,8 @@ namespace HellForge
                 int configVersion = source.Configs["General"].GetInt( "ConfigVersion", ConfigFileVersion );
                 CurrentSettings.EvernoteUsername = source.Configs["General"].Get( "EvernoteUsername", DefaultSettings.EvernoteUsername );
                 CurrentSettings.EvernotePassword = source.Configs["General"].Get( "EvernotePassword", DefaultSettings.EvernotePassword );
+                CurrentSettings.TwitterAccessToken = source.Configs["General"].Get( "TwitterAccessToken", DefaultSettings.EvernotePassword );
+                CurrentSettings.TwitterAccessSecret = source.Configs["General"].Get( "TwitterAccessSecret", DefaultSettings.EvernotePassword );
 
                 CurrentSettings.Repair( );
             }
@@ -121,6 +129,8 @@ namespace HellForge
             {
                 EvernoteUsername = EvernoteUsername,
                 EvernotePassword = EvernotePassword,
+                TwitterAccessToken = TwitterAccessToken,
+                TwitterAccessSecret = TwitterAccessSecret
             };
         }
 
@@ -135,7 +145,9 @@ namespace HellForge
 
             IConfig config = source.AddConfig( "General" );
             config.Set( "EvernoteUsername", EvernoteUsername );
-            config.Set( "EvernotePassword", EvernotePassword );          
+            config.Set( "EvernotePassword", EvernotePassword );
+            config.Set( "TwitterAccessToken", TwitterAccessToken );
+            config.Set( "TwitterAccessSecret", TwitterAccessSecret );
             source.Save( ConfigFileName );
             
             if ( Changed != null )

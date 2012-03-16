@@ -3,7 +3,6 @@ using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using System.Security.Cryptography;
 
 namespace HellForge
 {
@@ -19,7 +18,8 @@ namespace HellForge
                 return;
             }
 
-            EvernoteApi.PostExampleNote( Configuration.CurrentSettings.EvernoteUsername, Configuration.CurrentSettings.EvernotePassword );
+           //EvernoteApi.PostExampleNote( Configuration.CurrentSettings.EvernoteUsername, Configuration.CurrentSettings.EvernotePassword );
+            TwitterPoster.Tweet( "Test..." );
         }
     }
 }
