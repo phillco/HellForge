@@ -18,8 +18,8 @@ namespace HellForge
                 return;
             }
 
-           //EvernoteApi.PostExampleNote( Configuration.CurrentSettings.EvernoteUsername, Configuration.CurrentSettings.EvernotePassword );
-            TwitterPoster.Tweet( "Test..." );
+           EvernoteApi.Login( Configuration.CurrentSettings.EvernoteUsername, Configuration.CurrentSettings.EvernotePassword );
+           EvernoteApi.TweetRecentNotes( );
         }
     }
 }

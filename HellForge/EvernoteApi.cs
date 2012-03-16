@@ -33,25 +33,56 @@ namespace HellForge
         public const string Host = "sandbox.evernote.com";
         public const string BaseUrl = "https://" + Host;
 
+        private static AuthenticationResult authentication;
+
         /// <summary>
-        /// Demonstrates the Evernote API by posting an example note in the user's default notebook.
+        /// Logs into Evernote.
         /// Be sure to register an account at http://sandbox.evernote.com (production accounts will not work here!)
         /// </summary>
-        public static void PostExampleNote( string username, string password )
+        public static void Login( string username, string password )
         {
             // Login to Evernote.
-            AuthenticationResult auth = Authenticate( username, password );
+            authentication = Authenticate( username, password );           
+        }
 
-            // Connect to the note store.
-            NoteStore.Client noteClient = new NoteStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/note/" + auth.User.ShardId ) ) ) );
+        /// <summary>
+        /// Fetches the last 10 notes and tweets them.
+        /// </summary>
+        public static void TweetRecentNotes()
+        {
+             // Connect to the note store.
+            NoteStore.Client noteClient = new NoteStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/note/" + authentication.User.ShardId ) ) ) );
 
             // Find the default notebook.
-            Notebook notebook = FindDefaultNotebook( noteClient.listNotebooks( auth.AuthenticationToken ) );
+            Notebook notebook = FindDefaultNotebook( noteClient.listNotebooks( authentication.AuthenticationToken ) );
 
-            // Create a new note in it.
-            Note createdNote = noteClient.createNote( auth.AuthenticationToken, MakeDummyNote( notebook ) );
+            // Get a list of the most recent notes.
+            NoteList notes = noteClient.findNotes( authentication.AuthenticationToken, new NoteFilter { Ascending = false, Order = 1 }, 0, 10 );
 
-            Console.WriteLine( "Successfully created new note with GUID: " + createdNote.Guid );
+            // Tweet them!
+            foreach ( Note note in notes.Notes )
+                TweetNote( note, noteClient, authentication );
+        }
+
+        /// <summary>
+        /// Tweets the given note.
+        /// </summary>
+        private static void TweetNote( Note note, NoteStore.Client noteClient, AuthenticationResult auth )
+        {
+            string tweet = note.Title;
+
+            if ( note.Resources != null && note.Resources.Count > 0 )
+            {
+                // Re-fetch the resource from the server to get its content.
+                Resource fetched = noteClient.getResource( auth.AuthenticationToken, note.Resources[0].Guid, true, false, false, false );
+
+                // Open the resource...
+                if ( fetched.Data != null && fetched.Data.Body != null )
+                {
+                    TwitterPoster.Tweet( tweet, fetched.Data.Body );
+                    return;
+                }
+            }
         }
 
         /// <summary>

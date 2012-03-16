@@ -26,7 +26,7 @@ namespace HellForge
         /// Tweets the given mssage
         /// </summary>
         /// <param name="message"></param>
-        public static void Tweet( string message )
+        public static void Tweet( string message, byte[] resource )
         {
             // Check if we need to authenticate first
             if ( string.IsNullOrEmpty( Configuration.CurrentSettings.TwitterAccessToken ) || string.IsNullOrEmpty( Configuration.CurrentSettings.TwitterAccessSecret ) )
@@ -41,7 +41,7 @@ namespace HellForge
                  AccessTokenSecret = Configuration.CurrentSettings.TwitterAccessSecret
              };
 
-            TwitterResponse<TwitterStatus> response = TwitterStatus.UpdateWithMedia( tokens, message, "enlogo.png" );
+            TwitterResponse<TwitterStatus> response = TwitterStatus.UpdateWithMedia( tokens, message, resource );
             if ( response.Result == RequestResult.Success )
                 Console.WriteLine( "Tweeted" );
             else
@@ -49,7 +49,7 @@ namespace HellForge
                 if ( response.Result == RequestResult.Unauthorized )
                     AcquireAuthentication( );
 
-                Console.WriteLine( "Error during tweet: " + response.ErrorMessage );
+                Console.WriteLine( "Error during tweet: " + response.Result + " / " + response.ErrorMessage );
             }
         }
 
