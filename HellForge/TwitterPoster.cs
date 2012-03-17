@@ -23,11 +23,10 @@ namespace HellForge
         private const string ConsumerSecret = "bAwtww2B0MY4FE2aiRm5MZqqFAivs1J44KI3rBIQ";
 
         /// <summary>
-        /// Tweets the given mssage
-        /// TODO: Max # of characters with a resource is 119
+        /// Tweets the given message and image; returns the result.
         /// </summary>
         /// <param name="message"></param>
-        public static void Tweet( string message, byte[] resource )
+        public static bool Tweet( string message, byte[] resource )
         {
             // Check if we need to authenticate first
             if ( string.IsNullOrEmpty( Configuration.CurrentSettings.TwitterAccessToken ) || string.IsNullOrEmpty( Configuration.CurrentSettings.TwitterAccessSecret ) )
@@ -43,7 +42,7 @@ namespace HellForge
              };
 
             TwitterResponse<TwitterStatus> response = TwitterStatus.UpdateWithMedia( tokens, message, resource );
-            if ( response.Result == RequestResult.Success )
+            if ( response.Result == RequestResult.Success )            
                 Console.WriteLine( "\tTweeted!" );
             else
             {
@@ -51,7 +50,10 @@ namespace HellForge
                     AcquireAuthentication( );
 
                 Console.WriteLine( "ERROR during tweet: " + response.Result + " / " + response.ErrorMessage );
+                return false;
             }
+
+            return true;
         }
 
         /// <summary>

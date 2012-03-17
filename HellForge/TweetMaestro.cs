@@ -6,6 +6,9 @@ using Evernote.EDAM.Type;
 
 namespace HellForge
 {
+    /// <summary>
+    /// Conducts everything.
+    /// </summary>
     class TweetMaestro
     {
         /// <summary>
@@ -29,8 +32,13 @@ namespace HellForge
             Console.WriteLine( "Tweeting \"" + tweet + "\"..." );
             if ( note.Resources != null && note.Resources.Count > 0 )
             {
-                GuidCache.Add( note.Guid ); // Mark as tweeted FIRST. Double tweeting is worse than missing a note here and there.
-                TwitterPoster.Tweet( tweet, note.Resources[0].Data.Body );
+                // Mark this note as tweeted. We do this first because double tweeting is worse than missing a note here and there.
+                GuidCache.Add( note.Guid );
+
+                // Tweet. If it failed, then mark it as untweeted.
+                if ( !TwitterPoster.Tweet( tweet, note.Resources[0].Data.Body ) )
+                    GuidCache.Remove( note.Guid );
+
                 Console.WriteLine( );
             }
         }

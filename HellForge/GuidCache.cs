@@ -43,6 +43,19 @@ namespace HellForge
         }
 
         /// <summary>
+        /// Removes the given GUID from the cache.
+        /// </summary>
+        public static void Remove( string guid )
+        {
+            lock ( _guids )
+            {                
+                _guids.Remove( guid );
+                Write( );
+            }
+        }
+
+
+        /// <summary>
         /// Returns whether the note with the given GUID has been tweeted.
         /// </summary>
         public static bool Contains( string guid )
