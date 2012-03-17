@@ -68,6 +68,7 @@
     <Compile Include="GuidCache.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TweetMaestro.cs" />
     <Compile Include="TwitterPoster.cs" />
   </ItemGroup>
   <ItemGroup>

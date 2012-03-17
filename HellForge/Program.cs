@@ -18,8 +18,7 @@ namespace HellForge
                 return;
             }
 
-           EvernoteApi.Login( Configuration.CurrentSettings.EvernoteUsername, Configuration.CurrentSettings.EvernotePassword );
-           EvernoteApi.TweetRecentNotes( );
+            TweetMaestro.FetchAndTweet( 1 );
         }
     }
 }

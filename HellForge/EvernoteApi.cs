@@ -19,6 +19,8 @@ namespace HellForge
     /// </summary>
     class EvernoteApi
     {
+        public static bool LoginNeeded { get { return ( authentication == null ); } }
+
         //=======================================================
         //
         // Configuration
@@ -35,6 +37,11 @@ namespace HellForge
 
         private static AuthenticationResult authentication;
 
+        public static void Login( )
+        {
+            Login( Configuration.CurrentSettings.EvernoteUsername, Configuration.CurrentSettings.EvernotePassword );
+        }
+
         /// <summary>
         /// Logs into Evernote.
         /// </summary>
@@ -43,13 +50,16 @@ namespace HellForge
             // Login to Evernote.
             Console.WriteLine( "Logging in to Evernote..." );
             authentication = Authenticate( username, password );
-        }
+        }        
 
         /// <summary>
-        /// Fetches the last 10 notes and tweets them.
+        /// Fetches the first n suitable notes to tweet.
         /// </summary>
-        public static void TweetRecentNotes( )
+        public static List<Note> GetNotesToTweet( int numNotesWanted )
         {
+            if ( LoginNeeded )
+                Login( );
+
             // Connect to the note store.  
             Console.WriteLine( "Fetching notebooks..." );
             NoteStore.Client noteClient = new NoteStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/note/" + authentication.User.ShardId ) ) ) );
@@ -59,50 +69,46 @@ namespace HellForge
             Notebook notebook = notebooks.Find( delegate( Notebook n ) { return n.Name == "Users in Hell"; } );
 
             // Get a list of the most recent notes.
-            NoteList notes = noteClient.findNotes( authentication.AuthenticationToken, new NoteFilter { Ascending = true, Order = 1, NotebookGuid = notebook.Guid }, 0, 100 );
-            Console.WriteLine( "Found " + notes.Notes.Count + " notes." );
-
-            // Tweet them!
-            foreach ( Note note in notes.Notes )
-            {
-                Console.WriteLine( "Tweeting \"" + note.Title + "\"..." );
-
-                if ( !GuidCache.Contains( note.Guid ) )
-                    TweetNote( note, noteClient, authentication );
-                else
-                    Console.WriteLine( "\n\tSKIPPING (already tweeted)\n" ); 
-            }
+            NoteList notes = noteClient.findNotes( authentication.AuthenticationToken, new NoteFilter { Ascending = true, Order = 1, NotebookGuid = notebook.Guid }, 0, 300 );
+            Console.WriteLine( "Found " + notes.Notes.Count + " notes in the notebook." );
+            
+            // Filter down to the first n untweeted notes. Download the attached images. And return!
+            return FetchResources( FilterNotes( notes.Notes, numNotesWanted), noteClient );
         }
 
         /// <summary>
-        /// Tweets the given note.
+        /// Removes notes that have already been tweeted or are too long. Limits to the first "numWanted" notes.
         /// </summary>
-        private static void TweetNote( Note note, NoteStore.Client noteClient, AuthenticationResult auth )
+        public static List<Note> FilterNotes( List<Note> notes, int numWanted )
         {
-            string tweet = note.Title.Replace('@', '-'); // Temporary; don't want to callout people during testingv.         
-
-            if ( tweet.Length > 119 )
+            // Filter and return.
+            List<Note> suitable = new List<Note>( );
+            foreach ( Note note in notes )
             {
-                Console.WriteLine( "\tERROR (too long): " + tweet + "\n" );
-                return;
+                if ( !GuidCache.Contains( note.Guid ) && note.Title.Length <= 119 )
+                    suitable.Add( note );
+
+                if ( suitable.Count == numWanted )
+                    break;
             }
 
-            if ( note.Resources != null && note.Resources.Count > 0 )
+            return suitable;
+        }
+
+        /// <summary>
+        /// Downloads the resource attachments for every note in the list.
+        /// </summary>
+        public static List<Note> FetchResources( List<Note> notes, NoteStore.Client noteClient )
+        {
+            Console.WriteLine( "Fetching resources for " + notes.Count + " note(s)..." );
+
+            foreach( Note note in notes )
             {
-                Console.WriteLine( "\tFetching images..." );
+                Resource fetched = noteClient.getResource( authentication.AuthenticationToken, note.Resources[0].Guid, true, false, false, false );
+                note.Resources[0] = fetched;
+            }
 
-                // Re-fetch the resource from the server to get its content.
-                Resource fetched = noteClient.getResource( auth.AuthenticationToken, note.Resources[0].Guid, true, false, false, false );
-
-                // Open the resource...
-                if ( fetched.Data != null && fetched.Data.Body != null )
-                {
-                    GuidCache.Add( note.Guid ); // Mark as tweeted FIRST. Double tweeting is worse than missing a note here and there.
-                    TwitterPoster.Tweet( tweet, fetched.Data.Body );                    
-                    Console.WriteLine( );
-                    return;
-                }
-            }            
+            return notes;
         }
 
         /// <summary>
@@ -139,34 +145,7 @@ namespace HellForge
 
             return defaultNotebook;
         }
-
-        /// <summary>
-        /// Creates a sample note to be placed in the given notebook.
-        /// </summary>
-        private static Note MakeDummyNote( Notebook createIn )
-        {
-            byte[] image = File.ReadAllBytes( "enlogo.png" );
-            byte[] hash = new MD5CryptoServiceProvider( ).ComputeHash( image );
-
-            // Create the note.
-            Note note = new Note
-            {
-                NotebookGuid = createIn.Guid,
-                Title = "Test note from EvernoteSharp!",
-                Content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                    "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">" +
-                    "<en-note>Here's the Evernote logo:<br/>" +
-                    "<en-media type=\"image/png\" hash=\"" + Md5HashToHex( hash ) + "\"/>" +
-                    "</en-note>",
-            };
-
-            // Attach the image to the note as a resource.
-            note.Resources = new List<Resource>( );
-            note.Resources.Add( new Resource { Mime = "image/png", Data = new Data { Size = image.Length, BodyHash = hash, Body = image } } );
-
-            return note;
-        }
-
+      
         /// <summary>
         /// Determines what went wrong given the login failure from Evernote.
         /// </summary>
