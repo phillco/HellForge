@@ -24,6 +24,7 @@ namespace HellForge
 
         /// <summary>
         /// Tweets the given mssage
+        /// TODO: Max # of characters with a resource is 119
         /// </summary>
         /// <param name="message"></param>
         public static void Tweet( string message, byte[] resource )
@@ -43,13 +44,13 @@ namespace HellForge
 
             TwitterResponse<TwitterStatus> response = TwitterStatus.UpdateWithMedia( tokens, message, resource );
             if ( response.Result == RequestResult.Success )
-                Console.WriteLine( "Tweeted" );
+                Console.WriteLine( "\tTweeted!" );
             else
             {
                 if ( response.Result == RequestResult.Unauthorized )
                     AcquireAuthentication( );
 
-                Console.WriteLine( "Error during tweet: " + response.Result + " / " + response.ErrorMessage );
+                Console.WriteLine( "ERROR during tweet: " + response.Result + " / " + response.ErrorMessage );
             }
         }
 

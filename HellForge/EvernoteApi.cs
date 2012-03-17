@@ -25,43 +25,53 @@ namespace HellForge
         //
         //=======================================================
 
-        // Insert your application's API key here (must be a "Client Application key", get one here: http://dev.evernote.com/documentation/cloud/)
-        public const string ApiConsumerKey = "CHANGE_ME";
-        public const string ApiConsumerSecret = "CHANGE_ME";
+        // No way we can obfuscate these in an open-source app...
+        public const string ApiConsumerKey = "philltopia";
+        public const string ApiConsumerSecret = "b1959c61538223f2";
 
         // Set the environment here (sandbox or www).
-        public const string Host = "sandbox.evernote.com";
+        public const string Host = "www.evernote.com";
         public const string BaseUrl = "https://" + Host;
 
         private static AuthenticationResult authentication;
 
         /// <summary>
         /// Logs into Evernote.
-        /// Be sure to register an account at http://sandbox.evernote.com (production accounts will not work here!)
         /// </summary>
         public static void Login( string username, string password )
         {
             // Login to Evernote.
-            authentication = Authenticate( username, password );           
+            Console.WriteLine( "Logging in to Evernote..." );
+            authentication = Authenticate( username, password );
         }
 
         /// <summary>
         /// Fetches the last 10 notes and tweets them.
         /// </summary>
-        public static void TweetRecentNotes()
+        public static void TweetRecentNotes( )
         {
-             // Connect to the note store.
+            // Connect to the note store.  
+            Console.WriteLine( "Fetching notebooks..." );
             NoteStore.Client noteClient = new NoteStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/note/" + authentication.User.ShardId ) ) ) );
 
-            // Find the default notebook.
-            Notebook notebook = FindDefaultNotebook( noteClient.listNotebooks( authentication.AuthenticationToken ) );
+            // Find the specified notebook.
+            List<Notebook> notebooks = noteClient.listNotebooks( authentication.AuthenticationToken );
+            Notebook notebook = notebooks.Find( delegate( Notebook n ) { return n.Name == "Users in Hell"; } );
 
             // Get a list of the most recent notes.
-            NoteList notes = noteClient.findNotes( authentication.AuthenticationToken, new NoteFilter { Ascending = false, Order = 1 }, 0, 10 );
+            NoteList notes = noteClient.findNotes( authentication.AuthenticationToken, new NoteFilter { Ascending = true, Order = 1, NotebookGuid = notebook.Guid }, 0, 100 );
+            Console.WriteLine( "Found " + notes.Notes.Count + " notes." );
 
             // Tweet them!
             foreach ( Note note in notes.Notes )
-                TweetNote( note, noteClient, authentication );
+            {
+                Console.WriteLine( "Tweeting \"" + note.Title + "\"..." );
+
+                if ( !GuidCache.Contains( note.Guid ) )
+                    TweetNote( note, noteClient, authentication );
+                else
+                    Console.WriteLine( "\n\tSKIPPING (already tweeted)\n" ); 
+            }
         }
 
         /// <summary>
@@ -69,20 +79,30 @@ namespace HellForge
         /// </summary>
         private static void TweetNote( Note note, NoteStore.Client noteClient, AuthenticationResult auth )
         {
-            string tweet = note.Title;
+            string tweet = note.Title.Replace('@', '-'); // Temporary; don't want to callout people during testingv.         
+
+            if ( tweet.Length > 119 )
+            {
+                Console.WriteLine( "\tERROR (too long): " + tweet + "\n" );
+                return;
+            }
 
             if ( note.Resources != null && note.Resources.Count > 0 )
             {
+                Console.WriteLine( "\tFetching images..." );
+
                 // Re-fetch the resource from the server to get its content.
                 Resource fetched = noteClient.getResource( auth.AuthenticationToken, note.Resources[0].Guid, true, false, false, false );
 
                 // Open the resource...
                 if ( fetched.Data != null && fetched.Data.Body != null )
                 {
-                    TwitterPoster.Tweet( tweet, fetched.Data.Body );
+                    GuidCache.Add( note.Guid ); // Mark as tweeted FIRST. Double tweeting is worse than missing a note here and there.
+                    TwitterPoster.Tweet( tweet, fetched.Data.Body );                    
+                    Console.WriteLine( );
                     return;
                 }
-            }
+            }            
         }
 
         /// <summary>
