@@ -12,6 +12,8 @@ namespace HellForge
     /// </summary>
     class TwitterPoster
     {
+        private static log4net.ILog log = log4net.LogManager.GetLogger( System.Reflection.MethodBase.GetCurrentMethod( ).DeclaringType );
+
         //=======================================================
         //
         // Configuration
@@ -43,13 +45,13 @@ namespace HellForge
 
             TwitterResponse<TwitterStatus> response = TwitterStatus.UpdateWithMedia( tokens, message, resource );
             if ( response.Result == RequestResult.Success )            
-                Console.WriteLine( "\tTweeted!" );
+                log.Info( "Tweeted: " + message );
             else
             {
                 if ( response.Result == RequestResult.Unauthorized )
                     AcquireAuthentication( );
 
-                Console.WriteLine( "ERROR during tweet: " + response.Result + " / " + response.ErrorMessage );
+                log.Error( "Error during tweet: " + response.Result + " / " + response.ErrorMessage );
                 return false;
             }
 
@@ -64,7 +66,7 @@ namespace HellForge
         /// </summary>
         public static void AcquireAuthentication( )
         {
-            Console.WriteLine( "Authenticating aplication with Twitter..." );
+            log.Info( "Authenticating aplication with Twitter..." );
 
             // Obtain a request token and calculate the URL to run.
             OAuthTokenResponse requestToken = OAuthUtility.GetRequestToken( ConsumerKey, ConsumerSecret, "oob" );

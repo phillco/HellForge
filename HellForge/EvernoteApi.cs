@@ -19,6 +19,8 @@ namespace HellForge
     /// </summary>
     class EvernoteApi
     {
+        private static log4net.ILog log = log4net.LogManager.GetLogger( System.Reflection.MethodBase.GetCurrentMethod( ).DeclaringType );
+
         public static bool LoginNeeded { get { return ( authentication == null ); } }
 
         //=======================================================
@@ -48,7 +50,7 @@ namespace HellForge
         public static void Login( string username, string password )
         {
             // Login to Evernote.
-            Console.WriteLine( "Logging in to Evernote..." );
+            log.Info( "Logging in to Evernote..." );
             authentication = Authenticate( username, password );
         }        
 
@@ -61,7 +63,7 @@ namespace HellForge
                 Login( );
 
             // Connect to the note store.  
-            Console.WriteLine( "Fetching notebooks..." );
+            log.Info( "Fetching notebooks..." );
             NoteStore.Client noteClient = new NoteStore.Client( new TBinaryProtocol( new THttpClient( new Uri( BaseUrl + "/edam/note/" + authentication.User.ShardId ) ) ) );
 
             // Find the specified notebook.
@@ -70,7 +72,7 @@ namespace HellForge
 
             // Get a list of the most recent notes.
             NoteList notes = noteClient.findNotes( authentication.AuthenticationToken, new NoteFilter { Ascending = true, Order = 1, NotebookGuid = notebook.Guid }, 0, 300 );
-            Console.WriteLine( "Found " + notes.Notes.Count + " notes in the notebook." );
+            log.Info( "Found " + notes.Notes.Count + " notes in the notebook." );
             
             // Filter down to the first n untweeted notes. Download the attached images. And return!
             return FetchResources( FilterNotes( notes.Notes, numNotesWanted), noteClient );
@@ -100,7 +102,7 @@ namespace HellForge
         /// </summary>
         public static List<Note> FetchResources( List<Note> notes, NoteStore.Client noteClient )
         {
-            Console.WriteLine( "Fetching resources for " + notes.Count + " note(s)..." );
+            log.Info( "Fetching resources for " + notes.Count + " note(s)..." );
 
             foreach( Note note in notes )
             {

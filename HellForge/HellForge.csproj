@@ -49,6 +49,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="log4net">
+      <HintPath>..\Assemblies\log4net.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\Assemblies\Newtonsoft.Json.dll</HintPath>
     </Reference>

@@ -13,6 +13,8 @@ namespace HellForge
     /// </summary>
     class Configuration
     {
+        private static log4net.ILog log = log4net.LogManager.GetLogger( System.Reflection.MethodBase.GetCurrentMethod( ).DeclaringType );
+
         //=======================================================
         //
         // The settings themselves.
@@ -109,7 +111,7 @@ namespace HellForge
             catch ( ArgumentException )
             {
                 CurrentSettings = DefaultSettings;
-                Console.WriteLine( "There was an error reading the configuration file. The default settings have been loaded." );
+                log.Warn( "There was an error reading the configuration file. The default settings have been loaded." );
             }
         }
 

@@ -11,6 +11,8 @@ namespace HellForge
     /// </summary>
     class TweetMaestro
     {
+        private static log4net.ILog log = log4net.LogManager.GetLogger( System.Reflection.MethodBase.GetCurrentMethod( ).DeclaringType );
+
         /// <summary>
         /// Fetches the number of specified notes from Evernote and tweets them.
         /// </summary>
@@ -29,7 +31,7 @@ namespace HellForge
         {
             string tweet = note.Title.Replace( '@', '-' ); // Temporary; don't want to callout people during testingv.         
 
-            Console.WriteLine( "Tweeting \"" + tweet + "\"..." );
+            log.Info( "Tweeting \"" + tweet + "\"..." );
             if ( note.Resources != null && note.Resources.Count > 0 )
             {
                 // Mark this note as tweeted. We do this first because double tweeting is worse than missing a note here and there.
@@ -38,8 +40,6 @@ namespace HellForge
                 // Tweet. If it failed, then mark it as untweeted.
                 if ( !TwitterPoster.Tweet( tweet, note.Resources[0].Data.Body ) )
                     GuidCache.Remove( note.Guid );
-
-                Console.WriteLine( );
             }
         }
     }
